@@ -1,47 +1,45 @@
 import 'package:flutter/material.dart';
+import '../database/app_database.dart';
 
 // Importaciones de pantallas
-import 'products_screen.dart'; // 🟩 Productos
-import 'clients_screen.dart'; // 🟦 Clientes
-import 'sales_screen.dart'; // 🟨 Ventas
-import 'profile_screen.dart'; // ⚙️ Perfil
+import 'products_screen.dart';
+import 'clients_screen.dart';
+import 'sales_screen.dart';
+import 'profile_screen.dart';
 
 class HomeShell extends StatefulWidget {
-  const HomeShell({super.key});
+  final AppDatabase database;
+
+  const HomeShell({super.key, required this.database});
 
   @override
   State<HomeShell> createState() => _HomeShellState();
 }
 
 class _HomeShellState extends State<HomeShell> {
-  // Índice actual del menú inferior
   int _currentIndex = 0;
-
-  // Lista de pantallas reales en orden de navegación
-  final List<Widget> _pages = const [
-    ProductsScreen(),
-    ClientsScreen(),
-    SalesScreen(),
-    ProfileScreen(),
-  ];
 
   @override
   Widget build(BuildContext context) {
+    // Lista de pantallas que reciben la base de datos
+    final List<Widget> _pages = [
+      ProductsScreen(database: widget.database),
+      ClientsScreen(database: widget.database),
+      SalesScreen(database: widget.database),
+      const ProfileScreen(),
+    ];
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('VentaSmart'),
         centerTitle: true,
       ),
-
-      // Cuerpo dinámico
       body: SafeArea(
         child: _pages[_currentIndex],
       ),
-
-      // Menú inferior (Bottom Navigation Bar)
       bottomNavigationBar: NavigationBar(
         selectedIndex: _currentIndex,
-        onDestinationSelected: (int index) {
+        onDestinationSelected: (index) {
           setState(() {
             _currentIndex = index;
           });

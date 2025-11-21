@@ -1,14 +1,17 @@
 import 'package:flutter/material.dart';
+import '../database/app_database.dart';
 
 class ProductsScreen extends StatefulWidget {
-  const ProductsScreen({super.key});
+  final AppDatabase database;
+
+  const ProductsScreen({super.key, required this.database});
 
   @override
   State<ProductsScreen> createState() => _ProductsScreenState();
 }
 
 class _ProductsScreenState extends State<ProductsScreen> {
-  // Lista de productos
+  // Lista de productos (temporal, luego será CRUD con DB)
   final List<Map<String, dynamic>> _products = [
     {"name": "Camiseta", "price": 45000},
     {"name": "Pantalón", "price": 80000},
@@ -18,7 +21,6 @@ class _ProductsScreenState extends State<ProductsScreen> {
   final _nameCtrl = TextEditingController();
   final _priceCtrl = TextEditingController();
 
-  // Limpieza de controladores al cerrar
   @override
   void dispose() {
     _nameCtrl.dispose();

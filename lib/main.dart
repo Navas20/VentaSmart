@@ -1,12 +1,20 @@
 import 'package:flutter/material.dart';
+import 'database/app_database.dart';
 import 'screens/home_shell.dart';
 
-void main() {
-  runApp(const VentaSmartApp());
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // Inicializar la Base de Datos
+  final database = await $FloorAppDatabase.databaseBuilder('ventas.db').build();
+
+  runApp(VentaSmartApp(database: database));
 }
 
 class VentaSmartApp extends StatelessWidget {
-  const VentaSmartApp({super.key});
+  final AppDatabase database;
+
+  VentaSmartApp({super.key, required this.database});
 
   @override
   Widget build(BuildContext context) {
@@ -14,10 +22,10 @@ class VentaSmartApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: 'VentaSmart',
       theme: ThemeData(
-        colorSchemeSeed: Colors.teal,
         useMaterial3: true,
+        colorSchemeSeed: Colors.teal,
       ),
-      home: const HomeShell(),
+      home: HomeShell(database: database),
     );
   }
 }
