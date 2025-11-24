@@ -76,7 +76,9 @@ class _$AppDatabase extends AppDatabase {
 
   ProductoDao? _productoDaoInstance;
 
-  VentaDao? _ventaDaoInstance;
+  VentasDao? _ventasDaoInstance;
+
+  UsuarioDao? _usuarioDaoInstance;
 
   Future<sqflite.Database> open(
     String path,
@@ -84,7 +86,7 @@ class _$AppDatabase extends AppDatabase {
     Callback? callback,
   ]) async {
     final databaseOptions = sqflite.OpenDatabaseOptions(
-      version: 1,
+      version: 3,
       onConfigure: (database) async {
         await database.execute('PRAGMA foreign_keys = ON');
         await callback?.onConfigure?.call(database);
@@ -100,11 +102,13 @@ class _$AppDatabase extends AppDatabase {
       },
       onCreate: (database, version) async {
         await database.execute(
-            'CREATE TABLE IF NOT EXISTS `Cliente` (`id` INTEGER, `nombre` TEXT NOT NULL, `telefono` TEXT NOT NULL, `correo` TEXT NOT NULL, PRIMARY KEY (`id`))');
+            'CREATE TABLE IF NOT EXISTS `clientes` (`id` INTEGER, `nombre` TEXT NOT NULL, `correo` TEXT NOT NULL, `telefono` TEXT NOT NULL, PRIMARY KEY (`id`))');
         await database.execute(
-            'CREATE TABLE IF NOT EXISTS `Producto` (`id` INTEGER, `nombre` TEXT NOT NULL, `precio` REAL NOT NULL, PRIMARY KEY (`id`))');
+            'CREATE TABLE IF NOT EXISTS `productos` (`id` INTEGER, `nombre` TEXT NOT NULL, `precio` REAL NOT NULL, PRIMARY KEY (`id`))');
         await database.execute(
-            'CREATE TABLE IF NOT EXISTS `Venta` (`id` INTEGER, `productoId` INTEGER NOT NULL, `clienteId` INTEGER NOT NULL, `fecha` TEXT NOT NULL, `total` REAL NOT NULL, PRIMARY KEY (`id`))');
+            'CREATE TABLE IF NOT EXISTS `ventas` (`id` INTEGER, `idCliente` INTEGER NOT NULL, `idProducto` INTEGER NOT NULL, `cantidad` INTEGER NOT NULL, `total` REAL NOT NULL, PRIMARY KEY (`id`))');
+        await database.execute(
+            'CREATE TABLE IF NOT EXISTS `Usuario` (`id` INTEGER PRIMARY KEY AUTOINCREMENT, `nombre` TEXT NOT NULL, `correo` TEXT NOT NULL, `password` TEXT NOT NULL)');
 
         await callback?.onCreate?.call(database, version);
       },
@@ -123,8 +127,13 @@ class _$AppDatabase extends AppDatabase {
   }
 
   @override
-  VentaDao get ventaDao {
-    return _ventaDaoInstance ??= _$VentaDao(database, changeListener);
+  VentasDao get ventasDao {
+    return _ventasDaoInstance ??= _$VentasDao(database, changeListener);
+  }
+
+  @override
+  UsuarioDao get usuarioDao {
+    return _usuarioDaoInstance ??= _$UsuarioDao(database, changeListener);
   }
 }
 
@@ -135,32 +144,32 @@ class _$ClienteDao extends ClienteDao {
   )   : _queryAdapter = QueryAdapter(database),
         _clienteInsertionAdapter = InsertionAdapter(
             database,
-            'Cliente',
+            'clientes',
             (Cliente item) => <String, Object?>{
                   'id': item.id,
                   'nombre': item.nombre,
-                  'telefono': item.telefono,
-                  'correo': item.correo
+                  'correo': item.correo,
+                  'telefono': item.telefono
                 }),
         _clienteUpdateAdapter = UpdateAdapter(
             database,
-            'Cliente',
+            'clientes',
             ['id'],
             (Cliente item) => <String, Object?>{
                   'id': item.id,
                   'nombre': item.nombre,
-                  'telefono': item.telefono,
-                  'correo': item.correo
+                  'correo': item.correo,
+                  'telefono': item.telefono
                 }),
         _clienteDeletionAdapter = DeletionAdapter(
             database,
-            'Cliente',
+            'clientes',
             ['id'],
             (Cliente item) => <String, Object?>{
                   'id': item.id,
                   'nombre': item.nombre,
-                  'telefono': item.telefono,
-                  'correo': item.correo
+                  'correo': item.correo,
+                  'telefono': item.telefono
                 });
 
   final sqflite.DatabaseExecutor database;
@@ -177,40 +186,38 @@ class _$ClienteDao extends ClienteDao {
 
   @override
   Future<List<Cliente>> findAllClientes() async {
-    return _queryAdapter.queryList('SELECT * FROM Cliente',
+    return _queryAdapter.queryList('SELECT * FROM clientes',
         mapper: (Map<String, Object?> row) => Cliente(
             id: row['id'] as int?,
             nombre: row['nombre'] as String,
-            telefono: row['telefono'] as String,
-            correo: row['correo'] as String));
+            correo: row['correo'] as String,
+            telefono: row['telefono'] as String));
   }
 
   @override
   Future<Cliente?> findClienteById(int id) async {
-    return _queryAdapter.query('SELECT * FROM Cliente WHERE id = ?1',
+    return _queryAdapter.query('SELECT * FROM clientes WHERE id = ?1',
         mapper: (Map<String, Object?> row) => Cliente(
             id: row['id'] as int?,
             nombre: row['nombre'] as String,
-            telefono: row['telefono'] as String,
-            correo: row['correo'] as String),
+            correo: row['correo'] as String,
+            telefono: row['telefono'] as String),
         arguments: [id]);
   }
 
   @override
-  Future<int> insertCliente(Cliente cliente) {
-    return _clienteInsertionAdapter.insertAndReturnId(
-        cliente, OnConflictStrategy.abort);
+  Future<void> insertCliente(Cliente cliente) async {
+    await _clienteInsertionAdapter.insert(cliente, OnConflictStrategy.abort);
   }
 
   @override
-  Future<int> updateCliente(Cliente cliente) {
-    return _clienteUpdateAdapter.updateAndReturnChangedRows(
-        cliente, OnConflictStrategy.abort);
+  Future<void> updateCliente(Cliente cliente) async {
+    await _clienteUpdateAdapter.update(cliente, OnConflictStrategy.abort);
   }
 
   @override
-  Future<int> deleteCliente(Cliente cliente) {
-    return _clienteDeletionAdapter.deleteAndReturnChangedRows(cliente);
+  Future<void> deleteCliente(Cliente cliente) async {
+    await _clienteDeletionAdapter.delete(cliente);
   }
 }
 
@@ -221,7 +228,7 @@ class _$ProductoDao extends ProductoDao {
   )   : _queryAdapter = QueryAdapter(database),
         _productoInsertionAdapter = InsertionAdapter(
             database,
-            'Producto',
+            'productos',
             (Producto item) => <String, Object?>{
                   'id': item.id,
                   'nombre': item.nombre,
@@ -229,7 +236,7 @@ class _$ProductoDao extends ProductoDao {
                 }),
         _productoUpdateAdapter = UpdateAdapter(
             database,
-            'Producto',
+            'productos',
             ['id'],
             (Producto item) => <String, Object?>{
                   'id': item.id,
@@ -238,7 +245,7 @@ class _$ProductoDao extends ProductoDao {
                 }),
         _productoDeletionAdapter = DeletionAdapter(
             database,
-            'Producto',
+            'productos',
             ['id'],
             (Producto item) => <String, Object?>{
                   'id': item.id,
@@ -260,7 +267,7 @@ class _$ProductoDao extends ProductoDao {
 
   @override
   Future<List<Producto>> findAllProductos() async {
-    return _queryAdapter.queryList('SELECT * FROM Producto',
+    return _queryAdapter.queryList('SELECT * FROM productos',
         mapper: (Map<String, Object?> row) => Producto(
             id: row['id'] as int?,
             nombre: row['nombre'] as String,
@@ -269,7 +276,7 @@ class _$ProductoDao extends ProductoDao {
 
   @override
   Future<Producto?> findProductoById(int id) async {
-    return _queryAdapter.query('SELECT * FROM Producto WHERE id = ?1',
+    return _queryAdapter.query('SELECT * FROM productos WHERE id = ?1',
         mapper: (Map<String, Object?> row) => Producto(
             id: row['id'] as int?,
             nombre: row['nombre'] as String,
@@ -278,58 +285,56 @@ class _$ProductoDao extends ProductoDao {
   }
 
   @override
-  Future<int> insertProducto(Producto producto) {
-    return _productoInsertionAdapter.insertAndReturnId(
-        producto, OnConflictStrategy.abort);
+  Future<void> insertProducto(Producto producto) async {
+    await _productoInsertionAdapter.insert(producto, OnConflictStrategy.abort);
   }
 
   @override
-  Future<int> updateProducto(Producto producto) {
-    return _productoUpdateAdapter.updateAndReturnChangedRows(
-        producto, OnConflictStrategy.abort);
+  Future<void> updateProducto(Producto producto) async {
+    await _productoUpdateAdapter.update(producto, OnConflictStrategy.abort);
   }
 
   @override
-  Future<int> deleteProducto(Producto producto) {
-    return _productoDeletionAdapter.deleteAndReturnChangedRows(producto);
+  Future<void> deleteProducto(Producto producto) async {
+    await _productoDeletionAdapter.delete(producto);
   }
 }
 
-class _$VentaDao extends VentaDao {
-  _$VentaDao(
+class _$VentasDao extends VentasDao {
+  _$VentasDao(
     this.database,
     this.changeListener,
   )   : _queryAdapter = QueryAdapter(database),
         _ventaInsertionAdapter = InsertionAdapter(
             database,
-            'Venta',
+            'ventas',
             (Venta item) => <String, Object?>{
                   'id': item.id,
-                  'productoId': item.productoId,
-                  'clienteId': item.clienteId,
-                  'fecha': item.fecha,
+                  'idCliente': item.idCliente,
+                  'idProducto': item.idProducto,
+                  'cantidad': item.cantidad,
                   'total': item.total
                 }),
         _ventaUpdateAdapter = UpdateAdapter(
             database,
-            'Venta',
+            'ventas',
             ['id'],
             (Venta item) => <String, Object?>{
                   'id': item.id,
-                  'productoId': item.productoId,
-                  'clienteId': item.clienteId,
-                  'fecha': item.fecha,
+                  'idCliente': item.idCliente,
+                  'idProducto': item.idProducto,
+                  'cantidad': item.cantidad,
                   'total': item.total
                 }),
         _ventaDeletionAdapter = DeletionAdapter(
             database,
-            'Venta',
+            'ventas',
             ['id'],
             (Venta item) => <String, Object?>{
                   'id': item.id,
-                  'productoId': item.productoId,
-                  'clienteId': item.clienteId,
-                  'fecha': item.fecha,
+                  'idCliente': item.idCliente,
+                  'idProducto': item.idProducto,
+                  'cantidad': item.cantidad,
                   'total': item.total
                 });
 
@@ -347,41 +352,90 @@ class _$VentaDao extends VentaDao {
 
   @override
   Future<List<Venta>> findAllVentas() async {
-    return _queryAdapter.queryList('SELECT * FROM Venta',
+    return _queryAdapter.queryList('SELECT * FROM ventas',
         mapper: (Map<String, Object?> row) => Venta(
             id: row['id'] as int?,
-            productoId: row['productoId'] as int,
-            clienteId: row['clienteId'] as int,
-            fecha: row['fecha'] as String,
+            idCliente: row['idCliente'] as int,
+            idProducto: row['idProducto'] as int,
+            cantidad: row['cantidad'] as int,
             total: row['total'] as double));
   }
 
   @override
   Future<Venta?> findVentaById(int id) async {
-    return _queryAdapter.query('SELECT * FROM Venta WHERE id = ?1',
+    return _queryAdapter.query('SELECT * FROM ventas WHERE id = ?1',
         mapper: (Map<String, Object?> row) => Venta(
             id: row['id'] as int?,
-            productoId: row['productoId'] as int,
-            clienteId: row['clienteId'] as int,
-            fecha: row['fecha'] as String,
+            idCliente: row['idCliente'] as int,
+            idProducto: row['idProducto'] as int,
+            cantidad: row['cantidad'] as int,
             total: row['total'] as double),
         arguments: [id]);
   }
 
   @override
-  Future<int> insertVenta(Venta venta) {
-    return _ventaInsertionAdapter.insertAndReturnId(
-        venta, OnConflictStrategy.abort);
+  Future<void> insertVenta(Venta venta) async {
+    await _ventaInsertionAdapter.insert(venta, OnConflictStrategy.abort);
   }
 
   @override
-  Future<int> updateVenta(Venta venta) {
-    return _ventaUpdateAdapter.updateAndReturnChangedRows(
-        venta, OnConflictStrategy.abort);
+  Future<void> updateVenta(Venta venta) async {
+    await _ventaUpdateAdapter.update(venta, OnConflictStrategy.abort);
   }
 
   @override
-  Future<int> deleteVenta(Venta venta) {
-    return _ventaDeletionAdapter.deleteAndReturnChangedRows(venta);
+  Future<void> deleteVenta(Venta venta) async {
+    await _ventaDeletionAdapter.delete(venta);
+  }
+}
+
+class _$UsuarioDao extends UsuarioDao {
+  _$UsuarioDao(
+    this.database,
+    this.changeListener,
+  )   : _queryAdapter = QueryAdapter(database),
+        _usuarioInsertionAdapter = InsertionAdapter(
+            database,
+            'Usuario',
+            (Usuario item) => <String, Object?>{
+                  'id': item.id,
+                  'nombre': item.nombre,
+                  'correo': item.correo,
+                  'password': item.password
+                });
+
+  final sqflite.DatabaseExecutor database;
+
+  final StreamController<String> changeListener;
+
+  final QueryAdapter _queryAdapter;
+
+  final InsertionAdapter<Usuario> _usuarioInsertionAdapter;
+
+  @override
+  Future<Usuario?> findByEmail(String correo) async {
+    return _queryAdapter.query('SELECT * FROM Usuario WHERE correo = ?1',
+        mapper: (Map<String, Object?> row) => Usuario(
+            id: row['id'] as int?,
+            nombre: row['nombre'] as String,
+            correo: row['correo'] as String,
+            password: row['password'] as String),
+        arguments: [correo]);
+  }
+
+  @override
+  Future<Usuario?> findById(int id) async {
+    return _queryAdapter.query('SELECT * FROM Usuario WHERE id = ?1',
+        mapper: (Map<String, Object?> row) => Usuario(
+            id: row['id'] as int?,
+            nombre: row['nombre'] as String,
+            correo: row['correo'] as String,
+            password: row['password'] as String),
+        arguments: [id]);
+  }
+
+  @override
+  Future<void> insertUsuario(Usuario usuario) async {
+    await _usuarioInsertionAdapter.insert(usuario, OnConflictStrategy.abort);
   }
 }

@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import '../database/app_database.dart';
+import '../models/cliente.dart';
+import '../models/producto.dart';
+import '../models/venta.dart';
 
 class SalesScreen extends StatefulWidget {
   final AppDatabase database;
@@ -11,63 +14,117 @@ class SalesScreen extends StatefulWidget {
 }
 
 class _SalesScreenState extends State<SalesScreen> {
-  // Productos disponibles (simulados)
-  final List<Map<String, dynamic>> _products = [
-    {"name": "Camiseta", "price": 45000},
-    {"name": "Pantalón", "price": 80000},
-    {"name": "Zapatos", "price": 120000},
-  ];
+  List<Cliente> _clients = [];
+  List<Producto> _products = [];
+  List<Venta> _sales = [];
 
-  // Clientes disponibles (simulados)
-  final List<Map<String, String>> _clients = [
-    {"name": "Juan Pérez", "phone": "3001234567"},
-    {"name": "María Gómez", "phone": "3119876543"},
-  ];
-
-  // Lista de ventas registradas
-  final List<Map<String, dynamic>> _sales = [];
-
-  // Variables temporales para el formulario
-  Map<String, dynamic>? _selectedProduct;
-  Map<String, String>? _selectedClient;
+  Cliente? _selectedClient;
+  Producto? _selectedProduct;
   int _quantity = 1;
 
-  // Función para registrar la venta
-  void _registerSale() {
-    if (_selectedProduct == null || _selectedClient == null || _quantity <= 0) {
+  Venta? _editingSale; // << NUEVO
+
+  @override
+  void initState() {
+    super.initState();
+    _loadAllData();
+  }
+
+  Future<void> _loadAllData() async {
+    _clients = await widget.database.clienteDao.findAllClientes();
+    _products = await widget.database.productoDao.findAllProductos();
+    _sales = await widget.database.ventasDao.findAllVentas();
+    setState(() {});
+  }
+
+  // =====================================================
+  //                 GUARDAR / EDITAR VENTA
+  // =====================================================
+  Future<void> _saveSale() async {
+    if (_selectedClient == null || _selectedProduct == null) return;
+
+    final total = _selectedProduct!.precio * _quantity;
+
+    if (_editingSale == null) {
+      // INSERTAR
+      final newSale = Venta(
+        id: null,
+        idCliente: _selectedClient!.id!,
+        idProducto: _selectedProduct!.id!,
+        cantidad: _quantity,
+        total: total,
+      );
+
+      await widget.database.ventasDao.insertVenta(newSale);
+    } else {
+      // ACTUALIZAR
+      final updatedSale = Venta(
+        id: _editingSale!.id,
+        idCliente: _selectedClient!.id!,
+        idProducto: _selectedProduct!.id!,
+        cantidad: _quantity,
+        total: total,
+      );
+
+      await widget.database.ventasDao.updateVenta(updatedSale);
+    }
+
+    Navigator.pop(context);
+    await _loadAllData();
+  }
+
+  // =====================================================
+  //                   ELIMINAR VENTA
+  // =====================================================
+  Future<void> _deleteSale(int id) async {
+    final sale = await widget.database.ventasDao.findVentaById(id);
+    if (sale == null) return;
+
+    await widget.database.ventasDao.deleteVenta(sale);
+    _loadAllData();
+  }
+
+  // =====================================================
+  //                   MODAL DE FORMULARIO
+  // =====================================================
+  void _openSaleDialog({Venta? sale}) {
+    if (_clients.isEmpty || _products.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content:
+              Text("Debes registrar clientes y productos antes de vender."),
+        ),
+      );
       return;
     }
 
-    final total = _selectedProduct!["price"] * _quantity;
-
-    setState(() {
-      _sales.insert(0, {
-        "product": _selectedProduct!["name"],
-        "client": _selectedClient!["name"],
-        "quantity": _quantity,
-        "total": total,
-        "date": DateTime.now(),
-      });
-    });
-
-    Navigator.pop(context);
-  }
-
-  // Muestra el formulario en un modal
-  void _openSaleDialog() {
-    _selectedProduct = _products.first;
-    _selectedClient = _clients.first;
-    _quantity = 1;
+    if (sale == null) {
+      // NUEVA VENTA
+      _editingSale = null;
+      _selectedClient = _clients.first;
+      _selectedProduct = _products.first;
+      _quantity = 1;
+    } else {
+      // EDITAR
+      _editingSale = sale;
+      _selectedClient = _clients.firstWhere((c) => c.id == sale.idCliente);
+      _selectedProduct = _products.firstWhere((p) => p.id == sale.idProducto);
+      _quantity = sale.cantidad;
+    }
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
       builder: (ctx) => Padding(
         padding: EdgeInsets.only(
-          bottom: MediaQuery.of(ctx).viewInsets.bottom + 16,
-          left: 16,
-          right: 16,
-          top: 16,
+          bottom: MediaQuery.of(ctx).viewInsets.bottom + 18,
+          left: 18,
+          right: 18,
+          top: 20,
         ),
         child: StatefulBuilder(
           builder: (context, setStateModal) {
@@ -75,88 +132,111 @@ class _SalesScreenState extends State<SalesScreen> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Registrar venta',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                Text(
+                  _editingSale == null ? "Registrar Venta" : "Editar Venta",
+                  style: const TextStyle(
+                    color: Color(0xff5A0E60),
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
-                const SizedBox(height: 12),
-                DropdownButtonFormField<Map<String, dynamic>>(
+                const SizedBox(height: 16),
+
+                // PRODUCTO
+                _buildDropdown<Producto>(
+                  label: "Producto",
                   value: _selectedProduct,
-                  items: _products
-                      .map((p) => DropdownMenuItem(
-                            value: p,
-                            child: Text('${p["name"]} - \$${p["price"]}'),
-                          ))
-                      .toList(),
-                  onChanged: (v) {
-                    setStateModal(() {
-                      _selectedProduct = v;
-                    });
-                  },
-                  decoration: const InputDecoration(
-                    labelText: 'Producto',
-                    border: OutlineInputBorder(),
-                  ),
+                  items: _products,
+                  display: (p) => "${p.nombre} - \$${p.precio}",
+                  onChanged: (v) => setStateModal(() => _selectedProduct = v),
                 ),
-                const SizedBox(height: 12),
-                DropdownButtonFormField<Map<String, String>>(
+                const SizedBox(height: 14),
+
+                // CLIENTE
+                _buildDropdown<Cliente>(
+                  label: "Cliente",
                   value: _selectedClient,
-                  items: _clients
-                      .map((c) => DropdownMenuItem(
-                            value: c,
-                            child: Text(c["name"]!),
-                          ))
-                      .toList(),
-                  onChanged: (v) {
-                    setStateModal(() {
-                      _selectedClient = v;
-                    });
-                  },
-                  decoration: const InputDecoration(
-                    labelText: 'Cliente',
-                    border: OutlineInputBorder(),
-                  ),
+                  items: _clients,
+                  display: (c) => c.nombre,
+                  onChanged: (v) => setStateModal(() => _selectedClient = v),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 14),
+
+                // CANTIDAD
                 Row(
                   children: [
-                    const Text('Cantidad:'),
+                    const Text(
+                      "Cantidad:",
+                      style: TextStyle(
+                        color: Color(0xff5A0E60),
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                     Expanded(
                       child: Slider(
                         value: _quantity.toDouble(),
                         min: 1,
-                        max: 10,
-                        divisions: 9,
-                        label: '$_quantity',
+                        max: 20,
+                        divisions: 19,
+                        activeColor: const Color(0xffFF6A3D),
+                        label: "$_quantity",
                         onChanged: (v) {
-                          setStateModal(() {
-                            _quantity = v.toInt();
-                          });
+                          setStateModal(() => _quantity = v.toInt());
                         },
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 8),
+
+                const SizedBox(height: 20),
+
+                // BOTONES
                 Row(
                   children: [
                     Expanded(
-                      child: ElevatedButton.icon(
-                        onPressed: _registerSale,
-                        icon: const Icon(Icons.save),
-                        label: const Text('Guardar'),
+                      child: ElevatedButton(
+                        onPressed: _saveSale,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xffFF6A3D),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                        ),
+                        child: Text(
+                          _editingSale == null ? "Guardar" : "Actualizar",
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                          ),
+                        ),
                       ),
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: 12),
                     Expanded(
-                      child: OutlinedButton.icon(
+                      child: OutlinedButton(
                         onPressed: () => Navigator.pop(context),
-                        icon: const Icon(Icons.close),
-                        label: const Text('Cancelar'),
+                        style: OutlinedButton.styleFrom(
+                          side: const BorderSide(
+                            color: Color(0xff5A0E60),
+                            width: 1.4,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                        ),
+                        child: const Text(
+                          "Cancelar",
+                          style: TextStyle(
+                            color: Color(0xff5A0E60),
+                            fontSize: 16,
+                          ),
+                        ),
                       ),
                     ),
                   ],
-                ),
+                )
               ],
             );
           },
@@ -165,39 +245,111 @@ class _SalesScreenState extends State<SalesScreen> {
     );
   }
 
+  // =====================================================
+  //                 DROPDOWN REUSABLE
+  // =====================================================
+  Widget _buildDropdown<T>({
+    required String label,
+    required T? value,
+    required List<T> items,
+    required String Function(T) display,
+    required Function(T?) onChanged,
+  }) {
+    return DropdownButtonFormField<T>(
+      value: value,
+      items: items
+          .map((e) => DropdownMenuItem(
+                value: e,
+                child: Text(display(e)),
+              ))
+          .toList(),
+      onChanged: onChanged,
+      decoration: InputDecoration(
+        labelText: label,
+        labelStyle: const TextStyle(color: Color(0xff5A0E60)),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        focusedBorder: OutlineInputBorder(
+          borderSide: const BorderSide(
+            color: Color(0xff5A0E60),
+            width: 2,
+          ),
+          borderRadius: BorderRadius.circular(12),
+        ),
+      ),
+    );
+  }
+
+  // =====================================================
+  //                       UI
+  // =====================================================
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xfff7f4fa),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: _openSaleDialog,
-        icon: const Icon(Icons.add_shopping_cart),
-        label: const Text('Venta'),
+        onPressed: () => _openSaleDialog(),
+        backgroundColor: const Color(0xffFF6A3D),
+        icon: const Icon(Icons.add_shopping_cart, color: Colors.white),
+        label: const Text("Venta", style: TextStyle(color: Colors.white)),
       ),
       body: _sales.isEmpty
           ? const Center(
-              child: Text('No hay ventas registradas.'),
+              child: Text(
+                "No hay ventas registradas.",
+                style: TextStyle(
+                  color: Color(0xff5A0E60),
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
             )
           : ListView.builder(
-              padding: const EdgeInsets.all(8),
+              padding: const EdgeInsets.all(12),
               itemCount: _sales.length,
               itemBuilder: (context, index) {
                 final sale = _sales[index];
+
+                final product =
+                    _products.firstWhere((p) => p.id == sale.idProducto);
+                final client =
+                    _clients.firstWhere((c) => c.id == sale.idCliente);
+
                 return Card(
-                  margin:
-                      const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
+                  elevation: 4,
+                  margin: const EdgeInsets.symmetric(vertical: 8),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
                   child: ListTile(
-                    leading: const Icon(Icons.receipt_long),
+                    leading: const CircleAvatar(
+                      backgroundColor: Color(0xff5A0E60),
+                      child: Icon(Icons.receipt, color: Colors.white),
+                    ),
                     title: Text(
-                        '${sale["product"]} x${sale["quantity"]} — \$${sale["total"]}'),
+                      "${product.nombre} x${sale.cantidad} — \$${sale.total.toStringAsFixed(0)}",
+                      style: const TextStyle(
+                        color: Color(0xff5A0E60),
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                     subtitle: Text(
-                        '${sale["client"]} · ${sale["date"].toString().substring(0, 16)}'),
-                    trailing: IconButton(
-                      icon: const Icon(Icons.delete_outline),
-                      onPressed: () {
-                        setState(() {
-                          _sales.removeAt(index);
-                        });
-                      },
+                      client.nombre,
+                      style: const TextStyle(height: 1.3),
+                    ),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          icon:
+                              const Icon(Icons.edit, color: Color(0xff5A0E60)),
+                          onPressed: () => _openSaleDialog(sale: sale),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.delete, color: Colors.red),
+                          onPressed: () => _deleteSale(sale.id!),
+                        ),
+                      ],
                     ),
                   ),
                 );

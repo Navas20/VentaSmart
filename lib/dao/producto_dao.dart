@@ -3,18 +3,18 @@ import '../models/producto.dart';
 
 @dao
 abstract class ProductoDao {
-  @Query('SELECT * FROM Producto')
+  @Query('SELECT * FROM productos')
   Future<List<Producto>> findAllProductos();
 
-  @Query('SELECT * FROM Producto WHERE id = :id')
-  Future<Producto?> findProductoById(int id);
+  @Query('SELECT * FROM productos WHERE id = :id')
+  Future<Producto?> findProductoById(int id); // 👈 FALTABA ESTE MÉTODO
 
   @insert
-  Future<int> insertProducto(Producto producto);
+  Future<void> insertProducto(Producto producto);
 
   @update
-  Future<int> updateProducto(Producto producto);
+  Future<void> updateProducto(Producto producto);
 
   @delete
-  Future<int> deleteProducto(Producto producto);
+  Future<void> deleteProducto(Producto producto);
 }

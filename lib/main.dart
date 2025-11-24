@@ -1,31 +1,44 @@
 import 'package:flutter/material.dart';
 import 'database/app_database.dart';
-import 'screens/home_shell.dart';
+import 'screens/login_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Inicializar la Base de Datos
-  final database = await $FloorAppDatabase.databaseBuilder('ventas.db').build();
+  final database =
+      await $FloorAppDatabase.databaseBuilder('app_database.db').build();
 
-  runApp(VentaSmartApp(database: database));
+  runApp(MyApp(database: database));
 }
 
-class VentaSmartApp extends StatelessWidget {
+class MyApp extends StatelessWidget {
   final AppDatabase database;
 
-  VentaSmartApp({super.key, required this.database});
+  const MyApp({super.key, required this.database});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'VentaSmart',
+      title: 'Ventas App',
+
+      // 🔥 ESTA ES LA PARTE QUE FALTABA
+      home: LoginScreen(database: database),
+
       theme: ThemeData(
-        useMaterial3: true,
-        colorSchemeSeed: Colors.teal,
+        brightness: Brightness.light,
+        scaffoldBackgroundColor: const Color(0xFFF8F5FA),
+        colorScheme: const ColorScheme.light(
+          primary: Color(0xFF4C1C57),
+          secondary: Color(0xFFFF6F3C),
+          tertiary: Color(0xFFFFD66B),
+        ),
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Color(0xFF4C1C57),
+          foregroundColor: Colors.white,
+          elevation: 0,
+        ),
       ),
-      home: HomeShell(database: database),
     );
   }
 }

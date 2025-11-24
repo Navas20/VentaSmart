@@ -3,18 +3,18 @@ import '../models/cliente.dart';
 
 @dao
 abstract class ClienteDao {
-  @Query('SELECT * FROM Cliente')
+  @Query('SELECT * FROM clientes')
   Future<List<Cliente>> findAllClientes();
 
-  @Query('SELECT * FROM Cliente WHERE id = :id')
+  @Query('SELECT * FROM clientes WHERE id = :id')
   Future<Cliente?> findClienteById(int id);
 
   @insert
-  Future<int> insertCliente(Cliente cliente);
+  Future<void> insertCliente(Cliente cliente);
 
   @update
-  Future<int> updateCliente(Cliente cliente);
+  Future<void> updateCliente(Cliente cliente);
 
   @delete
-  Future<int> deleteCliente(Cliente cliente);
+  Future<void> deleteCliente(Cliente cliente);
 }

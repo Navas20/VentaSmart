@@ -1,20 +1,20 @@
 import 'package:floor/floor.dart';
 
-@entity
+@Entity(tableName: 'ventas')
 class Venta {
   @primaryKey
   final int? id;
 
-  final int productoId;
-  final int clienteId;
-  final String fecha;
+  final int idCliente;
+  final int idProducto;
+  final int cantidad;
   final double total;
 
   Venta({
     this.id,
-    required this.productoId,
-    required this.clienteId,
-    required this.fecha,
+    required this.idCliente,
+    required this.idProducto,
+    required this.cantidad,
     required this.total,
   });
 }

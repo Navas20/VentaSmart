@@ -1,18 +1,18 @@
 import 'package:floor/floor.dart';
 
-@Entity(tableName: 'clientes')
-class Cliente {
-  @primaryKey
+@entity
+class Usuario {
+  @PrimaryKey(autoGenerate: true)
   final int? id;
 
   final String nombre;
   final String correo;
-  final String telefono;
+  final String password;
 
-  Cliente({
+  Usuario({
     this.id,
     required this.nombre,
     required this.correo,
-    required this.telefono,
+    required this.password,
   });
 }
