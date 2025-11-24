@@ -1,32 +1,5 @@
-Perfecto, Daniel.
-Voy a prepararte un **README.md completo, profesional y actualizado**, usando:
 
-📄 **Tu documento anterior (`Entregable_VentaSmart_UNIGUAJIRA.docx`)**
-⚙️ **Todo lo nuevo que implementamos:**
 
-* Login
-* Registro de usuarios
-* Auth + cierre de sesión
-* Perfil dinámico
-* CRUD completo (Productos, Clientes, Ventas)
-* Floor Database
-* Navegación con HomeShell
-* Tema personalizado
-* Buenas prácticas de Flutter
-* Capturas sugeridas
-* Instalación y despliegue
-* Estructura del proyecto
-* Conclusión profesional
-
----
-
-# ✅ **AQUÍ TIENES EL README.md PROFESIONAL PARA TU REPOSITORIO**
-
-Guárdalo como **README.md** en la raíz de tu proyecto.
-
----
-
-```md
 # 📱 VentaSmart — Sistema de Gestión de Ventas en Flutter
 
 VentaSmart es una aplicación móvil desarrollada en **Flutter**, diseñada para gestionar productos, clientes y ventas de manera sencilla, rápida y elegante.  
@@ -105,11 +78,11 @@ El sistema implementa autenticación de usuarios, CRUD completo con base de dato
 - Menú inferior animado.
 - Transiciones limpias.
 
----
+
 
 ## 📁 Estructura del Proyecto
 
-```
+
 
 lib/
 ├─ database/
@@ -156,19 +129,18 @@ flutter pub get
 
 ### 3️⃣ Generar DAOs de Floor
 
-```
 
 flutter pub run build_runner build --delete-conflicting-outputs
 
-```
+
 
 ### 4️⃣ Ejecutar la app
 
-```
+
 
 flutter run
 
-```
+
 
 ---
 
@@ -228,5 +200,5 @@ Puedes utilizarlo libremente dando el respectivo crédito.
 
 ```
 
----
+
 
